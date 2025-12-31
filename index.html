@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>인터랙티브 지도 애플리케이션</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    <style>
+        .leaflet-container {
+            height: 100vh;
+            width: 100%;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        
+        .control-panel {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: white;
+            padding: 3px;
+            border-radius: 2px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.3);
+            z-index: 1000;
+            max-height: 95vh;
+            overflow-y: auto;
+            width: 140px;
+            font-size: 11px;
+        }
+        
+        .control-panel h3 {
+            margin: 0 0 2px 0;
+            color: #333;
+            font-size: 12px;
+            font-weight: 600;
+            border-bottom: 1px solid #ddd;
+            padding: 2px 0 2px 0;
+        }
+        
+        .category-section {
+            margin-bottom: 3px;
+        }
+        
+        .category-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1px;
+            padding: 1px 2px;
+            background: #fafafa;
+        }
+        
+        .category-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 2px;
+            margin-right: 3px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            flex-shrink: 0;
+        }
+        
+        .category-name {
+            flex: 1;
+            font-size: 11px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+        
+        .toggle-btn {
+            padding: 1px 4px;
+            border: 1px solid #999;
+            background: white;
+            cursor: pointer;
+            font-size: 10px;
+            margin-right: 1px;
+            flex-shrink: 0;
+        }
+        
+        .toggle-btn.active {
+            background: #333;
+            color: white;
+            border-color: #333;
+        }
+        
+        .toggle-btn.inactive {
+            background: white;
+            color: #999;
+        }
+        
+        .delete-btn {
+            padding: 1px 4px;
+            background: white;
+            color: #666;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            font-size: 10px;
+            flex-shrink: 0;
+        }
+        
+        .delete-btn:hover {
+            background: #f5f5f5;
+        }
+        
+        .add-category {
+            margin-top: 2px;
+        }
+        
+        .add-category input {
+            width: 100%;
+            padding: 2px;
+            margin-bottom: 2px;
+            border: 1px solid #ccc;
+            font-size: 11px;
+        }
+        
+        .add-category input[type="color"] {
+            width: 16px;
+            height: 16px;
+            padding: 0;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            vertical-align: middle;
+        }
+        
+        .add-category button {
+            display: inline-block;
+            padding: 1px 3px;
+            background: white;
+            border: 1px solid #999;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        
+        .add-category button:hover {
+            background: #f5f5f5;
+        }
+        
+        .mode-buttons {
+            margin-bottom: 3px;
+        }
+        
+        .mode-btn {
+            display: inline-block;
+            padding: 1px 3px;
+            margin: 0 1px 1px 0;
+            border: 1px solid #999;
+            background: white;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        
+        .mode-btn:hover {
+            background: #f5f5f5;
+        }
+        
+        .mode-btn.active {
+            background: #333;
+            color: white;
+            border-color: #333;
+        }
+        
+        .stats {
+            margin-top: 3px;
+            padding: 2px;
+            background: #fafafa;
+            font-size: 10px;
+            line-height: 1.3;
+        }
+        
+        .custom-popup {
+            min-width: 200px;
+        }
+        
+        .popup-content textarea {
+            width: 100%;
+            min-height: 60px;
+            margin-bottom: 3px;
+            padding: 2px;
+            border: 1px solid #ccc;
+            resize: vertical;
+            font-size: 11px;
+        }
+        
+        .popup-content select {
+            width: 100%;
+            padding: 2px;
+            margin-bottom: 3px;
+            border: 1px solid #ccc;
+            font-size: 11px;
+        }
+        
+        .popup-content button {
+            padding: 2px 6px;
+            margin-right: 2px;
+            border: 1px solid #999;
+            background: white;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        
+        .save-btn:hover {
+            background: #f5f5f5;
+        }
+        
+        .cancel-btn:hover {
+            background: #f5f5f5;
+        }
+        
+        .export-section {
+            margin-top: 3px;
+        }
+        
+        .export-btn {
+            display: inline-block;
+            padding: 1px 3px;
+            background: white;
+            border: 1px solid #999;
+            cursor: pointer;
+            font-size: 11px;
+            margin: 0 1px 1px 0;
+        }
+        
+        .export-btn:hover {
+            background: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <div class="control-panel">
+        <h3>지도 컨트롤</h3>
+        
+        <div class="mode-buttons">
+            <button class="mode-btn marker-mode" onclick="setMode('marker')">마커 추가</button>
+            <button class="mode-btn line-mode" onclick="setMode('line')">선 그리기</button>
+            <button class="mode-btn polygon-mode" onclick="setMode('polygon')">도형 그리기</button>
+            <button class="mode-btn select-mode active" onclick="setMode('select')">선택 모드</button>
+        </div>
+        
+        <div class="category-section">
+            <h3>카테고리 관리</h3>
+            <div id="category-list"></div>
+            
+            <div class="add-category">
+                <input type="text" id="new-category-name" placeholder="새 카테고리 이름">
+                <input type="color" id="new-category-color" value="#FF5733">
+                <button onclick="addCategory()">카테고리 추가</button>
+            </div>
+        </div>
+        
+        <div class="stats">
+            <strong>통계</strong><br>
+            마커: <span id="total-markers">0</span><br>
+            선: <span id="total-lines">0</span><br>
+            도형: <span id="total-polygons">0</span>
+        </div>
+        
+        <div class="export-section">
+            <button class="export-btn" onclick="exportData()">데이터 저장</button>
+            <button class="export-btn" onclick="importData()">데이터 불러오기</button>
+            <input type="file" id="file-input" style="display: none;" accept=".json" onchange="handleFileSelect(event)">
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    
+    <script>
+        // Leaflet이 로드될 때까지 대기
+        function waitForLeaflet(callback) {
+            if (typeof L !== 'undefined') {
+                callback();
+            } else {
+                setTimeout(function() {
+                    waitForLeaflet(callback);
+                }, 50);
+            }
+        }
+        
+        // 전역 변수
+        let map;
+        let currentMode = 'select';
+        let categories = [
+            { id: 1, name: '관심 장소', color: '#FF5733', visible: true },
+            { id: 2, name: '식당', color: '#33FF57', visible: true },
+            { id: 3, name: '관광지', color: '#3357FF', visible: true }
+        ];
+        let nextCategoryId = 4;
+        let markers = [];
+        let lines = [];
+        let polygons = [];
+        let currentCategory = 1;
+        let drawnItems;
+        let currentDrawingHandlers = { onClick: null, onDblClick: null };
+        
+        // 그리기 모드 정리
+        function cleanupDrawingMode() {
+            if (currentDrawingHandlers.onClick) {
+                map.off('click', currentDrawingHandlers.onClick);
+                currentDrawingHandlers.onClick = null;
+            }
+            if (currentDrawingHandlers.onDblClick) {
+                map.off('dblclick', currentDrawingHandlers.onDblClick);
+                currentDrawingHandlers.onDblClick = null;
+            }
+        }
+        
+        // 지도 초기화 (서울 중심)
+        function initMap() {
+            drawnItems = new L.FeatureGroup();
+            map = L.map('map').setView([37.5665, 126.9780], 13);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+            
+            // 지도가 완전히 로드된 후 크기 재조정
+            setTimeout(function() {
+                map.invalidateSize();
+            }, 100);
+            
+            map.addLayer(drawnItems);
+            
+            // 지도 클릭 이벤트
+            map.on('click', function(e) {
+                if (currentMode === 'marker') {
+                    addMarker(e.latlng);
+                }
+            });
+            
+            renderCategories();
+            updateStats();
+        }
+        
+        // 모드 설정
+        function setMode(mode) {
+            // 이전 그리기 모드 정리
+            cleanupDrawingMode();
+            
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            
+            if (mode === 'marker') {
+                document.querySelector('.marker-mode').classList.add('active');
+            } else if (mode === 'line') {
+                document.querySelector('.line-mode').classList.add('active');
+                startDrawing('polyline');
+            } else if (mode === 'polygon') {
+                document.querySelector('.polygon-mode').classList.add('active');
+                startDrawing('polygon');
+            } else {
+                document.querySelector('.select-mode').classList.add('active');
+            }
+        }
+        
+        // 선/도형 그리기 시작
+        function startDrawing(type) {
+            if (type === 'polyline') {
+                let points = [];
+                let tempLine = null;
+                
+                function onClick(e) {
+                    points.push(e.latlng);
+                    
+                    if (tempLine) {
+                        map.removeLayer(tempLine);
+                    }
+                    
+                    if (points.length > 0) {
+                        const category = categories.find(c => c.id === currentCategory);
+                        tempLine = L.polyline(points, { color: category.color, weight: 3 }).addTo(map);
+                    }
+                }
+                
+                function onDblClick(e) {
+                    if (points.length > 1) {
+                        if (tempLine) {
+                            map.removeLayer(tempLine);
+                        }
+                        addLine(points);
+                    }
+                    
+                    cleanupDrawingMode();
+                    setMode('select');
+                }
+                
+                currentDrawingHandlers.onClick = onClick;
+                currentDrawingHandlers.onDblClick = onDblClick;
+                
+                map.on('click', onClick);
+                map.on('dblclick', onDblClick);
+            } else if (type === 'polygon') {
+                let points = [];
+                let tempPolygon = null;
+                
+                function onClick(e) {
+                    points.push(e.latlng);
+                    
+                    if (tempPolygon) {
+                        map.removeLayer(tempPolygon);
+                    }
+                    
+                    if (points.length > 0) {
+                        const category = categories.find(c => c.id === currentCategory);
+                        tempPolygon = L.polygon(points, { 
+                            color: category.color, 
+                            fillColor: category.color,
+                            fillOpacity: 0.3 
+                        }).addTo(map);
+                    }
+                }
+                
+                function onDblClick(e) {
+                    if (points.length > 2) {
+                        if (tempPolygon) {
+                            map.removeLayer(tempPolygon);
+                        }
+                        addPolygon(points);
+                    }
+                    
+                    cleanupDrawingMode();
+                    setMode('select');
+                }
+                
+                currentDrawingHandlers.onClick = onClick;
+                currentDrawingHandlers.onDblClick = onDblClick;
+                
+                map.on('click', onClick);
+                map.on('dblclick', onDblClick);
+            }
+        }
+        
+        // 마커 추가
+        function addMarker(latlng) {
+            const category = categories.find(c => c.id === currentCategory);
+            
+            const marker = L.marker(latlng, {
+                icon: L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div style="background-color: ${category.color}; width: 25px; height: 25px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
+                    iconSize: [25, 25],
+                    iconAnchor: [12, 12]
+                })
+            }).addTo(map);
+            
+            const markerData = {
+                id: Date.now(),
+                marker: marker,
+                latlng: latlng,
+                categoryId: currentCategory,
+                memo: ''
+            };
+            
+            markers.push(markerData);
+            
+            marker.on('click', function() {
+                showMarkerPopup(markerData);
+            });
+            
+            updateStats();
+        }
+        
+        // 선 추가
+        function addLine(points) {
+            const category = categories.find(c => c.id === currentCategory);
+            
+            const line = L.polyline(points, { 
+                color: category.color, 
+                weight: 3 
+            }).addTo(map);
+            
+            const lineData = {
+                id: Date.now(),
+                line: line,
+                points: points,
+                categoryId: currentCategory,
+                memo: ''
+            };
+            
+            lines.push(lineData);
+            
+            line.on('click', function() {
+                showShapePopup(lineData, 'line');
+            });
+            
+            updateStats();
+        }
+        
+        // 도형 추가
+        function addPolygon(points) {
+            const category = categories.find(c => c.id === currentCategory);
+            
+            const polygon = L.polygon(points, { 
+                color: category.color,
+                fillColor: category.color,
+                fillOpacity: 0.3,
+                weight: 2
+            }).addTo(map);
+            
+            const polygonData = {
+                id: Date.now(),
+                polygon: polygon,
+                points: points,
+                categoryId: currentCategory,
+                memo: ''
+            };
+            
+            polygons.push(polygonData);
+            
+            polygon.on('click', function() {
+                showShapePopup(polygonData, 'polygon');
+            });
+            
+            updateStats();
+        }
+        
+        // 마커 팝업 표시
+        function showMarkerPopup(markerData) {
+            const category = categories.find(c => c.id === markerData.categoryId);
+            
+            const popupContent = `
+                <div class="popup-content">
+                    <select id="popup-category">
+                        ${categories.map(c => `
+                            <option value="${c.id}" ${c.id === markerData.categoryId ? 'selected' : ''}>
+                                ${c.name}
+                            </option>
+                        `).join('')}
+                    </select>
+                    <textarea id="popup-memo" placeholder="메모 입력">${markerData.memo}</textarea>
+                    <button class="save-btn" onclick="saveMarkerData(${markerData.id})">저장</button>
+                    <button class="cancel-btn" onclick="deleteMarker(${markerData.id})">삭제</button>
+                </div>
+            `;
+            
+            markerData.marker.bindPopup(popupContent, { maxWidth: 300 }).openPopup();
+        }
+        
+        // 선/도형 팝업 표시
+        function showShapePopup(shapeData, type) {
+            const shape = type === 'line' ? shapeData.line : shapeData.polygon;
+            
+            const popupContent = `
+                <div class="popup-content">
+                    <select id="popup-category">
+                        ${categories.map(c => `
+                            <option value="${c.id}" ${c.id === shapeData.categoryId ? 'selected' : ''}>
+                                ${c.name}
+                            </option>
+                        `).join('')}
+                    </select>
+                    <textarea id="popup-memo" placeholder="메모 입력">${shapeData.memo}</textarea>
+                    <button class="save-btn" onclick="saveShapeData(${shapeData.id}, '${type}')">저장</button>
+                    <button class="cancel-btn" onclick="deleteShape(${shapeData.id}, '${type}')">삭제</button>
+                </div>
+            `;
+            
+            shape.bindPopup(popupContent, { maxWidth: 300 }).openPopup();
+        }
+        
+        // 마커 데이터 저장
+        function saveMarkerData(markerId) {
+            const markerData = markers.find(m => m.id === markerId);
+            const newCategoryId = parseInt(document.getElementById('popup-category').value);
+            const newMemo = document.getElementById('popup-memo').value;
+            
+            markerData.categoryId = newCategoryId;
+            markerData.memo = newMemo;
+            
+            const category = categories.find(c => c.id === newCategoryId);
+            markerData.marker.setIcon(L.divIcon({
+                className: 'custom-marker',
+                html: `<div style="background-color: ${category.color}; width: 25px; height: 25px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
+                iconSize: [25, 25],
+                iconAnchor: [12, 12]
+            }));
+            
+            map.closePopup();
+        }
+        
+        // 선/도형 데이터 저장
+        function saveShapeData(shapeId, type) {
+            const shapeArray = type === 'line' ? lines : polygons;
+            const shapeData = shapeArray.find(s => s.id === shapeId);
+            const newCategoryId = parseInt(document.getElementById('popup-category').value);
+            const newMemo = document.getElementById('popup-memo').value;
+            
+            shapeData.categoryId = newCategoryId;
+            shapeData.memo = newMemo;
+            
+            const category = categories.find(c => c.id === newCategoryId);
+            const shape = type === 'line' ? shapeData.line : shapeData.polygon;
+            
+            if (type === 'line') {
+                shape.setStyle({ color: category.color });
+            } else {
+                shape.setStyle({ 
+                    color: category.color,
+                    fillColor: category.color
+                });
+            }
+            
+            map.closePopup();
+        }
+        
+        // 마커 삭제
+        function deleteMarker(markerId) {
+            const index = markers.findIndex(m => m.id === markerId);
+            if (index > -1) {
+                map.removeLayer(markers[index].marker);
+                markers.splice(index, 1);
+                map.closePopup();
+                updateStats();
+            }
+        }
+        
+        // 선/도형 삭제
+        function deleteShape(shapeId, type) {
+            const shapeArray = type === 'line' ? lines : polygons;
+            const index = shapeArray.findIndex(s => s.id === shapeId);
+            
+            if (index > -1) {
+                const shape = type === 'line' ? shapeArray[index].line : shapeArray[index].polygon;
+                map.removeLayer(shape);
+                shapeArray.splice(index, 1);
+                map.closePopup();
+                updateStats();
+            }
+        }
+        
+        // 카테고리 추가
+        function addCategory() {
+            const name = document.getElementById('new-category-name').value.trim();
+            const color = document.getElementById('new-category-color').value;
+            
+            if (!name) {
+                alert('카테고리 이름을 입력하세요.');
+                return;
+            }
+            
+            categories.push({
+                id: nextCategoryId++,
+                name: name,
+                color: color,
+                visible: true
+            });
+            
+            document.getElementById('new-category-name').value = '';
+            renderCategories();
+        }
+        
+        // 카테고리 토글
+        function toggleCategory(categoryId) {
+            const category = categories.find(c => c.id === categoryId);
+            category.visible = !category.visible;
+            
+            markers.forEach(m => {
+                if (m.categoryId === categoryId) {
+                    if (category.visible) {
+                        map.addLayer(m.marker);
+                    } else {
+                        map.removeLayer(m.marker);
+                    }
+                }
+            });
+            
+            lines.forEach(l => {
+                if (l.categoryId === categoryId) {
+                    if (category.visible) {
+                        map.addLayer(l.line);
+                    } else {
+                        map.removeLayer(l.line);
+                    }
+                }
+            });
+            
+            polygons.forEach(p => {
+                if (p.categoryId === categoryId) {
+                    if (category.visible) {
+                        map.addLayer(p.polygon);
+                    } else {
+                        map.removeLayer(p.polygon);
+                    }
+                }
+            });
+            
+            renderCategories();
+        }
+        
+        // 카테고리 삭제
+        function deleteCategory(categoryId) {
+            if (categories.length <= 1) {
+                alert('최소 1개의 카테고리는 필요합니다.');
+                return;
+            }
+            
+            if (!confirm('이 카테고리를 삭제하시겠습니까? 관련된 모든 마커와 도형이 삭제됩니다.')) {
+                return;
+            }
+            
+            // 관련 마커, 선, 도형 삭제
+            markers = markers.filter(m => {
+                if (m.categoryId === categoryId) {
+                    map.removeLayer(m.marker);
+                    return false;
+                }
+                return true;
+            });
+            
+            lines = lines.filter(l => {
+                if (l.categoryId === categoryId) {
+                    map.removeLayer(l.line);
+                    return false;
+                }
+                return true;
+            });
+            
+            polygons = polygons.filter(p => {
+                if (p.categoryId === categoryId) {
+                    map.removeLayer(p.polygon);
+                    return false;
+                }
+                return true;
+            });
+            
+            categories = categories.filter(c => c.id !== categoryId);
+            
+            if (currentCategory === categoryId) {
+                currentCategory = categories[0].id;
+            }
+            
+            renderCategories();
+            updateStats();
+        }
+        
+        // 카테고리 렌더링
+        function renderCategories() {
+            const categoryList = document.getElementById('category-list');
+            categoryList.innerHTML = categories.map(cat => `
+                <div class="category-item" style="${cat.id === currentCategory ? 'background: #e8e8e8;' : ''}">
+                    <div class="category-color" style="background-color: ${cat.color}" 
+                         onclick="currentCategory = ${cat.id}; renderCategories();"></div>
+                    <div class="category-name">${cat.name}</div>
+                    <button class="toggle-btn ${cat.visible ? 'active' : 'inactive'}" 
+                            onclick="toggleCategory(${cat.id})">
+                        ${cat.visible ? 'ON' : 'OFF'}
+                    </button>
+                    <button class="delete-btn" onclick="deleteCategory(${cat.id})">×</button>
+                </div>
+            `).join('');
+        }
+        
+        // 통계 업데이트
+        function updateStats() {
+            document.getElementById('total-markers').textContent = markers.length;
+            document.getElementById('total-lines').textContent = lines.length;
+            document.getElementById('total-polygons').textContent = polygons.length;
+        }
+        
+        // 데이터 내보내기
+        function exportData() {
+            const data = {
+                categories: categories,
+                markers: markers.map(m => ({
+                    id: m.id,
+                    latlng: m.latlng,
+                    categoryId: m.categoryId,
+                    memo: m.memo
+                })),
+                lines: lines.map(l => ({
+                    id: l.id,
+                    points: l.points,
+                    categoryId: l.categoryId,
+                    memo: l.memo
+                })),
+                polygons: polygons.map(p => ({
+                    id: p.id,
+                    points: p.points,
+                    categoryId: p.categoryId,
+                    memo: p.memo
+                }))
+            };
+            
+            const dataStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `map_data_${new Date().getTime()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // 데이터 가져오기
+        function importData() {
+            document.getElementById('file-input').click();
+        }
+        
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    // 기존 데이터 삭제
+                    markers.forEach(m => map.removeLayer(m.marker));
+                    lines.forEach(l => map.removeLayer(l.line));
+                    polygons.forEach(p => map.removeLayer(p.polygon));
+                    
+                    markers = [];
+                    lines = [];
+                    polygons = [];
+                    
+                    // 카테고리 로드
+                    categories = data.categories;
+                    nextCategoryId = Math.max(...categories.map(c => c.id)) + 1;
+                    
+                    // 마커 로드
+                    data.markers.forEach(m => {
+                        const category = categories.find(c => c.id === m.categoryId);
+                        const marker = L.marker(m.latlng, {
+                            icon: L.divIcon({
+                                className: 'custom-marker',
+                                html: `<div style="background-color: ${category.color}; width: 25px; height: 25px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
+                                iconSize: [25, 25],
+                                iconAnchor: [12, 12]
+                            })
+                        }).addTo(map);
+                        
+                        const markerData = {
+                            id: m.id,
+                            marker: marker,
+                            latlng: m.latlng,
+                            categoryId: m.categoryId,
+                            memo: m.memo
+                        };
+                        
+                        markers.push(markerData);
+                        marker.on('click', function() {
+                            showMarkerPopup(markerData);
+                        });
+                    });
+                    
+                    // 선 로드
+                    data.lines.forEach(l => {
+                        const category = categories.find(c => c.id === l.categoryId);
+                        const line = L.polyline(l.points, { 
+                            color: category.color, 
+                            weight: 3 
+                        }).addTo(map);
+                        
+                        const lineData = {
+                            id: l.id,
+                            line: line,
+                            points: l.points,
+                            categoryId: l.categoryId,
+                            memo: l.memo
+                        };
+                        
+                        lines.push(lineData);
+                        line.on('click', function() {
+                            showShapePopup(lineData, 'line');
+                        });
+                    });
+                    
+                    // 도형 로드
+                    data.polygons.forEach(p => {
+                        const category = categories.find(c => c.id === p.categoryId);
+                        const polygon = L.polygon(p.points, { 
+                            color: category.color,
+                            fillColor: category.color,
+                            fillOpacity: 0.3,
+                            weight: 2
+                        }).addTo(map);
+                        
+                        const polygonData = {
+                            id: p.id,
+                            polygon: polygon,
+                            points: p.points,
+                            categoryId: p.categoryId,
+                            memo: p.memo
+                        };
+                        
+                        polygons.push(polygonData);
+                        polygon.on('click', function() {
+                            showShapePopup(polygonData, 'polygon');
+                        });
+                    });
+                    
+                    renderCategories();
+                    updateStats();
+                    alert('데이터를 성공적으로 불러왔습니다!');
+                } catch (error) {
+                    alert('파일을 읽는 중 오류가 발생했습니다.');
+                    console.error(error);
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        // 초기화
+        waitForLeaflet(function() {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initMap);
+            } else {
+                initMap();
+            }
+        });
+    </script>
+</body>
+</html>
